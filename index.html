@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Libro matriz</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="container header-content">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">LM</div>
+        <div>
+          <h1>Libro matriz</h1>
+          <p>Entradas y salidas de expedientes</p>
+        </div>
+      </div>
+
+      <button id="newButton" class="button primary">
+        + Nueva entrada
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="welcome">
+      <div>
+        <h2>Control de expedientes</h2>
+        <p>
+          Registrá una entrada. Cuando el expediente termine su recorrido
+          en la oficina, usá el botón “Dar salida”.
+        </p>
+      </div>
+      <span id="todayLabel" class="today-label"></span>
+    </section>
+
+    <section class="stats" aria-label="Resumen">
+      <article class="stat">
+        <span>Total registrado</span>
+        <strong id="totalCount">0</strong>
+      </article>
+
+      <article class="stat">
+        <span>En oficina</span>
+        <strong id="pendingCount">0</strong>
+      </article>
+
+      <article class="stat">
+        <span>Salidos</span>
+        <strong id="outCount">0</strong>
+      </article>
+
+      <article class="stat">
+        <span>Hojas del libro</span>
+        <strong id="sheetCount">0</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <nav class="navigation" aria-label="Estado de expedientes">
+        <button class="nav-button active" data-status="all" aria-pressed="true">
+          Todos <span id="allBadge">0</span>
+        </button>
+
+        <button class="nav-button" data-status="pending" aria-pressed="false">
+          En oficina <span id="pendingBadge">0</span>
+        </button>
+
+        <button class="nav-button" data-status="out" aria-pressed="false">
+          Salidos <span id="outBadge">0</span>
+        </button>
+      </nav>
+
+      <div class="filter-area">
+        <label class="search-label">
+          Buscar expediente
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Número, sigla, oficina u observaciones"
+          >
+        </label>
+
+        <label>
+          Mostrar movimientos
+          <select id="periodFilter">
+            <option value="all">De todas las fechas</option>
+            <option value="day">De una fecha</option>
+          </select>
+        </label>
+
+        <label id="dateFilterLabel" hidden>
+          Fecha del movimiento
+          <input id="dateFilter" type="date">
+        </label>
+
+        <button id="resetFilters" class="button light">
+          Limpiar
+        </button>
+      </div>
+
+      <div class="results-toolbar">
+        <p id="querySummary" aria-live="polite"></p>
+
+        <div class="button-group">
+          <button id="excelButton" class="button">
+            Descargar Excel
+          </button>
+
+          <button id="reportButton" class="button">
+            Reporte / PDF
+          </button>
+        </div>
+      </div>
+
+      <div class="sheet-toolbar">
+        <div>
+          <h3 id="sheetTitle">Hoja 1</h3>
+          <p id="sheetInfo"></p>
+        </div>
+
+        <button id="printSheetButton" class="button light">
+          Imprimir hoja completa
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Renglón</th>
+              <th>Entrada</th>
+              <th>Observaciones</th>
+              <th>Expediente</th>
+              <th>Sigla</th>
+              <th>Salida</th>
+              <th>Oficina destino</th>
+              <th>Libreta</th>
+              <th>Foliatura</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <button id="previousPage" class="button light">
+          ← Anterior
+        </button>
+
+        <label>
+          Hoja
+          <select id="pageSelect" aria-label="Seleccionar hoja"></select>
+        </label>
+
+        <button id="nextPage" class="button light">
+          Siguiente →
+        </button>
+      </div>
+    </section>
+
+    <section class="daily-help">
+      <strong>Para el cierre diario</strong>
+      <p>
+        Elegí “De una fecha”, seleccioná el día y descargá el Excel
+        o el reporte PDF. Se incluirán las entradas y salidas de ese día
+        que coincidan con la sección y la búsqueda.
+      </p>
+    </section>
+
+    <details class="backup-panel">
+      <summary>Respaldo y recuperación de datos</summary>
+
+      <div class="backup-content">
+        <p>
+          Los datos se guardan en este navegador. Descargá un respaldo
+          regularmente para conservarlos o trasladarlos a otra computadora.
+        </p>
+
+        <div class="button-group">
+          <button id="backupButton" class="button">
+            Descargar respaldo
+          </button>
+
+          <button id="restoreButton" class="button">
+            Importar respaldo
+          </button>
+
+          <input
+            id="restoreInput"
+            type="file"
+            accept=".json,application/json"
+            hidden
+          >
+        </div>
+      </div>
+    </details>
+
+    <footer>
+      Cada hoja contiene hasta 33 registros.
+      Los expedientes conservan su hoja y renglón al corregirlos.
+    </footer>
+  </main>
+
+  <dialog id="recordDialog">
+    <form id="recordForm">
+      <header class="dialog-header">
+        <div>
+          <h2 id="dialogTitle">Nueva entrada</h2>
+          <p id="dialogDescription"></p>
+        </div>
+
+        <button
+          id="closeDialog"
+          type="button"
+          class="close-button"
+          aria-label="Cerrar formulario"
+        >×</button>
+      </header>
+
+      <div class="dialog-body">
+        <input id="recordId" type="hidden">
+
+        <p id="recordLocation" class="location-label"></p>
+
+        <div id="exitSummary" class="exit-summary" hidden></div>
+
+        <section id="entrySection" class="form-section">
+          <h3>Datos de entrada</h3>
+
+          <div class="form-grid">
+            <label>
+              Fecha de entrada *
+              <input id="entryDate" type="date" required>
+              <small id="entryDateHelp"></small>
+            </label>
+
+            <label>
+              Expediente *
+              <input
+                id="expediente"
+                type="text"
+                maxlength="150"
+                placeholder="Ejemplo: 1234/2026"
+                required
+              >
+            </label>
+
+            <label class="full">
+              Sigla
+              <input
+                id="sigla"
+                type="text"
+                maxlength="80"
+                placeholder="Ejemplo: ADM"
+              >
+            </label>
+
+            <label class="full">
+              Observaciones
+              <textarea
+                id="observations"
+                rows="3"
+                maxlength="3000"
+                placeholder="Documentación recibida o detalle del trámite"
+              ></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section id="exitSection" class="form-section" hidden>
+          <h3>Datos de salida</h3>
+
+          <div class="form-grid">
+            <label>
+              Fecha de salida *
+              <input id="exitDate" type="date">
+              <small id="exitDateHelp"></small>
+            </label>
+
+            <label>
+              Oficina destino *
+              <input
+                id="office"
+                type="text"
+                maxlength="200"
+                placeholder="Oficina que recibe el expediente"
+              >
+            </label>
+
+            <label>
+              Libreta
+              <input
+                id="libreta"
+                type="text"
+                maxlength="100"
+                placeholder="Número o identificación"
+              >
+            </label>
+
+            <label>
+              Foliatura
+              <input
+                id="foliatura"
+                type="text"
+                maxlength="100"
+                placeholder="Ejemplo: 25 o 1–25"
+              >
+            </label>
+          </div>
+
+          <button id="clearExit" type="button" class="button danger" hidden>
+            Anular esta salida
+          </button>
+        </section>
+
+        <p id="formError" class="form-error" role="alert"></p>
+      </div>
+
+      <footer class="dialog-footer">
+        <button id="cancelDialog" type="button" class="button">
+          Cancelar
+        </button>
+
+        <button id="saveButton" type="submit" class="button primary">
+          Guardar entrada
+        </button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
